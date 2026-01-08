@@ -56,7 +56,8 @@ const slugify = (value: string): string => {
 /**
  * Normalizes a date string to an ISO date-only format (YYYY-MM-DD).
  * Accepts YYYY-MM-DD format and validates it; parses as UTC to avoid timezone shifts.
- * Throws if the input is not in valid YYYY-MM-DD format or the date is invalid.
+ * Validates the day against the actual number of days in the target month (including leap years).
+ * Throws if the input is not in valid YYYY-MM-DD format or the date is invalid (e.g., Feb 31).
  */
 const normalizeDate = (value: string): string => {
   const trimmed = value.trim();
@@ -71,16 +72,39 @@ const normalizeDate = (value: string): string => {
   const month = Number(match[2]);
   const day = Number(match[3]);
 
-  // Validate month and day ranges
-  if (month < 1 || month > 12 || day < 1 || day > 31) {
-    throw new Error('Invalid event date; month must be 1-12 and day 1-31.');
+  // Validate month range
+  if (month < 1 || month > 12) {
+    throw new Error('Invalid event date; month must be 1-12.');
   }
 
-  // Create date using Date.UTC to ensure UTC parsing
+  // Validate day range (basic check)
+  if (day < 1 || day > 31) {
+    throw new Error('Invalid event date; day must be 1-31.');
+  }
+
+  // Compute the actual number of days in the target month (including leap years)
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+  if (day > daysInMonth) {
+    throw new Error(
+      `Invalid event date; day must be 1-${daysInMonth} for ${year}-${String(month).padStart(2, '0')}.`,
+    );
+  }
+
+  // Create date using Date.UTC to ensure UTC parsing and verify no auto-correction occurred
   const utcDate = new Date(Date.UTC(year, month - 1, day));
 
   if (Number.isNaN(utcDate.getTime())) {
     throw new Error('Invalid event date; the date is not valid.');
+  }
+
+  // Verify that the parsed date matches the input (no auto-correction by Date.UTC)
+  if (
+    utcDate.getUTCFullYear() !== year ||
+    utcDate.getUTCMonth() + 1 !== month ||
+    utcDate.getUTCDate() !== day
+  ) {
+    throw new Error('Invalid event date; the date components do not match the expected values.');
   }
 
   // Return the date as YYYY-MM-DD
