@@ -36,29 +36,55 @@ export type EventModel = Model<EventDocument>;
 
 /**
  * Basic slugify helper to generate URL-friendly slugs from titles.
+ * Throws if the result would be empty (e.g., title contains only non-alphanumeric characters).
  */
 const slugify = (value: string): string => {
-  return value
+  const slug = value
     .toString()
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumeric with dashes
     .replace(/^-+|-+$/g, ''); // trim leading/trailing dashes
+  
+  if (!slug) {
+    throw new Error('Title must contain at least one alphanumeric character to generate a valid slug.');
+  }
+  
+  return slug;
 };
 
 /**
  * Normalizes a date string to an ISO date-only format (YYYY-MM-DD).
- * Throws if the input cannot be parsed into a valid date.
+ * Accepts YYYY-MM-DD format and validates it; parses as UTC to avoid timezone shifts.
+ * Throws if the input is not in valid YYYY-MM-DD format or the date is invalid.
  */
 const normalizeDate = (value: string): string => {
-  const date = new Date(value);
+  const trimmed = value.trim();
+  const dateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const match = trimmed.match(dateRegex);
 
-  if (Number.isNaN(date.getTime())) {
-    throw new Error('Invalid event date; expected a value parsable by Date.');
+  if (!match) {
+    throw new Error('Invalid event date; expected YYYY-MM-DD format.');
   }
 
-  // Return only the date part in ISO (e.g. 2026-01-08)
-  return date.toISOString().slice(0, 10);
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  // Validate month and day ranges
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    throw new Error('Invalid event date; month must be 1-12 and day 1-31.');
+  }
+
+  // Create date using Date.UTC to ensure UTC parsing
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (Number.isNaN(utcDate.getTime())) {
+    throw new Error('Invalid event date; the date is not valid.');
+  }
+
+  // Return the date as YYYY-MM-DD
+  return trimmed;
 };
 
 /**
@@ -161,13 +187,30 @@ EventSchema.index({ slug: 1 }, { unique: true });
 /**
  * Pre-save hook for:
  * - Generating a URL-friendly slug from the title (only when the title changes).
+ *   If a collision is detected, appends a counter or timestamp suffix until unique.
  * - Normalizing date to ISO (YYYY-MM-DD).
  * - Normalizing time to 24-hour HH:mm format.
  */
-EventSchema.pre<EventDocument>('save', function preSave(next) {
+EventSchema.pre<EventDocument>('save', async function preSave(next) {
   try {
     if (this.isModified('title')) {
-      this.slug = slugify(this.title);
+      const baseSlug = slugify(this.title);
+      let slug = baseSlug;
+      let counter = 1;
+
+      // Check if slug already exists (excluding current document)
+      while (
+        await (this.constructor as EventModel).exists({
+          slug,
+          _id: { $ne: this._id },
+        })
+      ) {
+        // Append counter to make slug unique
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      this.slug = slug;
     }
 
     if (this.isModified('date')) {

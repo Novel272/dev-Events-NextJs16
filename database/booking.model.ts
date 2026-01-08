@@ -52,9 +52,6 @@ const BookingSchema = new Schema<BookingDocument, BookingModel>(
   },
 );
 
-// Explicit index on eventId for clarity and performance.
-BookingSchema.index({ eventId: 1 });
-
 /**
  * Pre-save hook to:
  * - Ensure the referenced event exists before creating a booking.
