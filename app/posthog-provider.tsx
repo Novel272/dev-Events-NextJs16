@@ -10,11 +10,9 @@ export default function PostHogProviderWrapper({
   children: React.ReactNode
 }) {
   useEffect(() => {
-    console.log('POSTHOG KEY:', process.env.NEXT_PUBLIC_POSTHOG_KEY)
-    console.log('POSTHOG HOST:', process.env.NEXT_PUBLIC_POSTHOG_HOST)
-
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+      api_host: 'https://us.i.posthog.com',
+      capture_pageview: true,
     })
   }, [])
 

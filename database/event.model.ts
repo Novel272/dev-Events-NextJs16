@@ -158,8 +158,14 @@ const EventSchema = new Schema<EventDocument, EventModel>(
       index: true,
       trim: true,
     },
-    description: requiredString,
-    overview: requiredString,
+    description: {
+      type: String,
+      trim: true,
+    },
+    overview: {
+      type: String,
+      trim: true,
+    },
     image: requiredString,
     venue: requiredString,
     location: requiredString,
@@ -215,39 +221,33 @@ EventSchema.index({ slug: 1 }, { unique: true });
  * - Normalizing date to ISO (YYYY-MM-DD).
  * - Normalizing time to 24-hour HH:mm format.
  */
-EventSchema.pre<EventDocument>('save', async function preSave(next) {
-  try {
-    if (this.isModified('title')) {
-      const baseSlug = slugify(this.title);
-      let slug = baseSlug;
-      let counter = 1;
+EventSchema.pre('save', async function (this: EventDocument) {
+  if (this.isModified('title')) {
+    const baseSlug = slugify(this.title);
+    let slug = baseSlug;
+    let counter = 1;
 
-      // Check if slug already exists (excluding current document)
-      while (
-        await (this.constructor as EventModel).exists({
-          slug,
-          _id: { $ne: this._id },
-        })
-      ) {
-        // Append counter to make slug unique
-        slug = `${baseSlug}-${counter}`;
-        counter++;
-      }
-
-      this.slug = slug;
+    // Check if slug already exists (excluding current document)
+    while (
+      await Event.exists({
+        slug,
+        _id: { $ne: this._id },
+      })
+    ) {
+      // Append counter to make slug unique
+      slug = `${baseSlug}-${counter}`;
+      counter++;
     }
 
-    if (this.isModified('date')) {
-      this.date = normalizeDate(this.date);
-    }
+    this.slug = slug;
+  }
 
-    if (this.isModified('time')) {
-      this.time = normalizeTime(this.time);
-    }
+  if (this.isModified('date')) {
+    this.date = normalizeDate(this.date);
+  }
 
-    next();
-  } catch (error) {
-    next(error as Error);
+  if (this.isModified('time')) {
+    this.time = normalizeTime(this.time);
   }
 });
 
