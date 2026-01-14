@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import BookEvent from "@/components/BookEvent";
+import { EventAttrs } from "@/database";
+import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
+import EventCard from "@/components/EventCard";
 
 const BASE_URL=process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -13,6 +17,9 @@ const EventDetailedItem=({icon,alt,label}:{icon:string;alt:string,label:string})
 }
 
 const EventAgenda=({agendaItems}:{agendaItems:string[]})=>{
+  // BUGFIX: Check if agendaItems exists and has items before mapping
+  // Without this check, calling .map() on undefined will throw "Cannot read properties of undefined"
+  if(!agendaItems || agendaItems.length === 0) return null;
   return(
   <div className="agenda">
     <h2>Agenda</h2>
@@ -26,6 +33,9 @@ const EventAgenda=({agendaItems}:{agendaItems:string[]})=>{
 }
 
 const EventTags=({tagList}:{tagList:string[]})=>{
+  // BUGFIX: Check if tagList exists and has items before mapping
+  // Without this check, calling .map() on undefined will throw "Cannot read properties of undefined"
+  if(!tagList || tagList.length === 0) return null;
   return(
     <div className="flex flex-row gap-1.5  flex-warp">
       {tagList.map((tag)=>(
@@ -40,15 +50,24 @@ const EventDetailedPage = async ({params}:{ params:Promise<{slug:string}>}) => {
 
   const {slug}=await params; 
   const request=await fetch(`${BASE_URL}/api/events/${slug}`);
-  const {event:description,image,overview,date,time,location,mode,agenda,audience,tags,organizer}=await request.json();
+  // BUGFIX: Properly destructure the event object from the API response
+  // The API returns { event: {...} }, so we need to extract data.event first
+  // Then destructure all the individual fields from it
+  // Using || {} as fallback ensures we get empty object instead of undefined if API fails
+  const data = await request.json();
+  const {title, description, image, overview, date, time, location, mode, agenda, audience, tags, organizer} = data.event || {};
 
-  if(!description) return notFound();
+  if(!title) return notFound();
+
+  const bookings=10;
+
+const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
 
   return (
     <section id="events">
       <div className="header"> 
         <h1>Event Description</h1>
-        <p>{description}</p>
+        <p>{title}</p>
       </div>
       <div className="details">
         {/*left side of the page for detail side */}
@@ -68,20 +87,37 @@ const EventDetailedPage = async ({params}:{ params:Promise<{slug:string}>}) => {
             <EventDetailedItem icon="/icons/audience.svg" alt="audience" label={audience}/>
           </section>
           
-          <EventAgenda agendaItems={JSON.parse(agenda[0])}/>
+          <EventAgenda agendaItems={agenda}/>
 
           <section className="flex-col-gap-2">
             <h2>About The Organizer</h2>
             <p>{organizer}</p>
           </section>
-          <EventTags tagList={JSON.parse(tags[0])}/>
+          <EventTags tagList={tags}/>
 
         </div>
 
         {/*right side of the page for booking side */}
         <aside className="booking">
-          <p className="text-lg font-semibold">book here</p>
+          <div className="signup-card">
+            <h2>Register for the Event</h2>
+            {bookings>0?(
+              <p className="text-sm">join {bookings}who already joined</p>
+            ):(
+              <p className="text-sm">Be the first to join</p>
+            )}
+
+            <BookEvent />
+          </div>
         </aside>
+      </div>
+      <div className="flex w-full flex-col gap-4 pt-20">
+        <h2>Similar Events You May Like</h2>
+        <div className="events">
+          {similarEvent.length>0 && similarEvent.map((Sevent:EventAttrs)=>(
+            <EventCard key={Sevent.title} {...Sevent} slug={Sevent.slug || ''}/>
+          ))}
+        </div>
       </div>
     </section>
   )

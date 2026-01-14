@@ -155,7 +155,6 @@ const EventSchema = new Schema<EventDocument, EventModel>(
     slug: {
       type: String,
       unique: true,
-      index: true,
       trim: true,
     },
     description: {
@@ -210,9 +209,6 @@ const EventSchema = new Schema<EventDocument, EventModel>(
     collection: 'events',
   },
 );
-
-// Ensure slug is unique at the database level.
-EventSchema.index({ slug: 1 }, { unique: true });
 
 /**
  * Pre-save hook for:

@@ -6,9 +6,9 @@ import { Event, EventDocument } from '@/database/event.model';
  * Shape of the route parameters for this dynamic route.
  */
 interface RouteParams {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 /**
@@ -36,7 +36,8 @@ const normalizeSlug = (value: string | undefined | null): string => {
  */
 export async function GET(_request: NextRequest, context: RouteParams): Promise<NextResponse> {
   try {
-    const slug = normalizeSlug(context.params?.slug);
+    const params = await context.params;
+    const slug = normalizeSlug(params.slug);
 
     // Ensure a single shared DB connection for the process.
     await connectToDatabase();

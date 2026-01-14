@@ -35,6 +35,20 @@ export async function POST(req: NextRequest){
             return NextResponse.json({ message: "Image file is required"}, { status: 400 } );// Bad Request
         }
 
+        let tags;
+        let agenda;
+        
+        try {
+            const tagsValue = FormData.get("tags") as string;
+            const agendaValue = FormData.get("agenda") as string;
+            
+            // Try to parse as JSON, if it fails assume it's already an array or handle accordingly
+            tags = typeof tagsValue === 'string' && tagsValue.startsWith('[') ? JSON.parse(tagsValue) : [tagsValue];
+            agenda = typeof agendaValue === 'string' && agendaValue.startsWith('[') ? JSON.parse(agendaValue) : [agendaValue];
+        } catch(parseError) {
+            return NextResponse.json({ message: "Invalid JSON format for tags or agenda"}, { status: 400 } );
+        }
+
         // Convert image file to binary buffer format
         const arrayBuffer=await file.arrayBuffer();
         // Convert ArrayBuffer to Node.js Buffer
@@ -55,7 +69,11 @@ export async function POST(req: NextRequest){
         event.image=(uploadResult as {secure_url:string}).secure_url;
 
         // Save event to database with all form fields and image URL
-        const createdEvent= await Event.create(event);//From database/event.model.ts
+        const createdEvent= await Event.create({
+            ...event,
+            tags: tags,
+            agenda: agenda,
+        });//From database/event.model.ts
 
         // Return 201 with success message and created event data
         return NextResponse.json({ message:"Event created successfully", event: createdEvent},{ status:201});
