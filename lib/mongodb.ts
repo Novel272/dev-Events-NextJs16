@@ -63,6 +63,9 @@ const mongooseOptions: Parameters<typeof mongoose.connect>[1] = {
  * This function is safe to call in server components, API routes, and route
  * handlers. In development, it takes advantage of the global cache to avoid
  * opening multiple connections as Next.js reloads files.
+ *
+ * If a connection attempt fails, the cached promise is cleared to allow retries
+ * on subsequent calls.
  */
 export async function connectToDatabase(): Promise<Connection> {
   // If we already have an active connection, reuse it.
@@ -75,12 +78,19 @@ export async function connectToDatabase(): Promise<Connection> {
     cached.promise = mongoose.connect(MONGODB_URI, mongooseOptions);
   }
 
-  const mongooseInstance: Mongoose = await cached.promise;
+  try {
+    const mongooseInstance: Mongoose = await cached.promise;
 
-  // Store the resolved connection for future calls.
-  cached.conn = mongooseInstance.connection;
+    // Store the resolved connection for future calls.
+    cached.conn = mongooseInstance.connection;
 
-  return cached.conn;
+    return cached.conn;
+  } catch (error) {
+    // Clear the failed promise to allow retries on subsequent calls
+    cached.promise = null;
+    console.error('Failed to connect to MongoDB:', error);
+    throw error;
+  }
 }
 
 /**

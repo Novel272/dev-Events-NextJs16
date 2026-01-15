@@ -1,8 +1,29 @@
 import EventCard from "@/components/EventCard"
 import ExploreBtn from "@/components/ExploreBtn"
-import { events, Event } from '../lib/constants';
+import { EventAttrs } from "@/database";
+import { cacheLife } from "next/cache";
 
-const page = () => {
+
+// Get the base URL from environment variables
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+
+
+const Page = async () => {
+  'use cache';
+  cacheLife("hours");
+
+  if (!baseUrl) {
+    throw new Error('NEXT_PUBLIC_BASE_URL is not defined');
+  }
+
+  const response=await fetch(`${baseUrl}/api/events`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
+  }
+  
+  const {events}=await response.json();
+
   return (
     <section>
       <h1 className="text-center">The Hub For Every <br/> Event You Can't Miss</h1>
@@ -13,9 +34,9 @@ const page = () => {
         <h3>Featured Events</h3>
 
         <ul className="events">
-          {events.map((event)=>(
-            <li key={event.title}>
-              <EventCard {...event}/>
+          {events&&events.length>0&&events.filter((event:EventAttrs)=>event.slug).map((event:EventAttrs)=>(
+            <li key={event.slug || event.id || `event-${event.title}`} className="list-none">
+              <EventCard {...event} slug={event.slug || ''}/>
             </li>
           ))}
         </ul>
@@ -24,4 +45,4 @@ const page = () => {
   )
 }
 
-export default page
+export default Page
