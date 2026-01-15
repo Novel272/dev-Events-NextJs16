@@ -1,14 +1,27 @@
 import EventCard from "@/components/EventCard"
 import ExploreBtn from "@/components/ExploreBtn"
 import { EventAttrs } from "@/database";
+import { cacheLife } from "next/cache";
+
 
 // Get the base URL from environment variables
-const baseUrl = process.env.Next_PUBLIC_BASE_URL;
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
 
 const Page = async () => {
+  'use cache';
+  cacheLife("hours");
+
+  if (!baseUrl) {
+    throw new Error('NEXT_PUBLIC_BASE_URL is not defined');
+  }
 
   const response=await fetch(`${baseUrl}/api/events`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
+  }
+  
   const {events}=await response.json();
 
   return (
@@ -21,8 +34,8 @@ const Page = async () => {
         <h3>Featured Events</h3>
 
         <ul className="events">
-          {events&&events.length>0&&events.map((event:EventAttrs)=>(
-            <li key={event.slug} className="list-none">
+          {events&&events.length>0&&events.filter((event:EventAttrs)=>event.slug).map((event:EventAttrs)=>(
+            <li key={event.slug || event.id || `event-${event.title}`} className="list-none">
               <EventCard {...event} slug={event.slug || ''}/>
             </li>
           ))}

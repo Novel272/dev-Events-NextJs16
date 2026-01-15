@@ -16,7 +16,7 @@ const EventDetailedItem=({icon,alt,label}:{icon:string;alt:string,label:string})
   )
 }
 
-const EventAgenda=({agendaItems}:{agendaItems:string[]})=>{
+const EventAgenda=({agendaItems}:{agendaItems?:string[]})=>{
   // BUGFIX: Check if agendaItems exists and has items before mapping
   // Without this check, calling .map() on undefined will throw "Cannot read properties of undefined"
   if(!agendaItems || agendaItems.length === 0) return null;
@@ -32,12 +32,12 @@ const EventAgenda=({agendaItems}:{agendaItems:string[]})=>{
   )
 }
 
-const EventTags=({tagList}:{tagList:string[]})=>{
+const EventTags=({tagList}:{tagList?:string[]})=>{
   // BUGFIX: Check if tagList exists and has items before mapping
   // Without this check, calling .map() on undefined will throw "Cannot read properties of undefined"
   if(!tagList || tagList.length === 0) return null;
   return(
-    <div className="flex flex-row gap-1.5  flex-warp">
+    <div className="flex flex-row gap-1.5  flex-wrap">
       {tagList.map((tag)=>(
         <div  key={tag} className="pill">{tag}</div>
       ))}
@@ -48,8 +48,22 @@ const EventTags=({tagList}:{tagList:string[]})=>{
 
 const EventDetailedPage = async ({params}:{ params:Promise<{slug:string}>}) => {
 
-  const {slug}=await params; 
+  const {slug}=await params;
+  
+  if (!BASE_URL) {
+    throw new Error('BASE_URL is not defined');
+  }
+  
   const request=await fetch(`${BASE_URL}/api/events/${slug}`);
+  
+  if (request.status === 404) {
+    return notFound();
+  }
+  
+  if (!request.ok) {
+    throw new Error(`Failed to fetch event: ${request.status} ${request.statusText}`);
+  }
+  
   // BUGFIX: Properly destructure the event object from the API response
   // The API returns { event: {...} }, so we need to extract data.event first
   // Then destructure all the individual fields from it
@@ -72,7 +86,7 @@ const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
       <div className="details">
         {/*left side of the page for detail side */}
         <div className="content">
-          <Image src={image} alt="image banner" width={800} height={800} className="banner"/>
+          {image && <Image src={image} alt="image banner" width={800} height={800} className="banner"/>}
 
           <section className="flex-col-gap-2">
             <h2>Overview</h2>
@@ -80,11 +94,11 @@ const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
           </section>
           <section className="flex-col-gap-2">
             <h2>Event Details</h2>
-            <EventDetailedItem icon="/icons/calendar.svg" alt="date" label={date}/>
-            <EventDetailedItem icon="/icons/clock.svg" alt="clock" label={time}/>
-            <EventDetailedItem icon="/icons/pin.svg" alt="pin" label={location}/>
-            <EventDetailedItem icon="/icons/mode.svg" alt="mode" label={mode}/>
-            <EventDetailedItem icon="/icons/audience.svg" alt="audience" label={audience}/>
+            {date && <EventDetailedItem icon="/icons/calendar.svg" alt="date" label={date}/>}
+            {time && <EventDetailedItem icon="/icons/clock.svg" alt="clock" label={time}/>}
+            {location && <EventDetailedItem icon="/icons/pin.svg" alt="pin" label={location}/>}
+            {mode && <EventDetailedItem icon="/icons/mode.svg" alt="mode" label={mode}/>}
+            {audience && <EventDetailedItem icon="/icons/audience.svg" alt="audience" label={audience}/>}
           </section>
           
           <EventAgenda agendaItems={agenda}/>
@@ -102,7 +116,7 @@ const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
           <div className="signup-card">
             <h2>Register for the Event</h2>
             {bookings>0?(
-              <p className="text-sm">join {bookings}who already joined</p>
+              <p className="text-sm">join {bookings} who already joined</p>
             ):(
               <p className="text-sm">Be the first to join</p>
             )}
@@ -115,7 +129,7 @@ const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
         <h2>Similar Events You May Like</h2>
         <div className="events">
           {similarEvent.length>0 && similarEvent.map((Sevent:EventAttrs)=>(
-            <EventCard key={Sevent.title} {...Sevent} slug={Sevent.slug || ''}/>
+            <EventCard key={Sevent.slug || Sevent.id || `event-${Sevent.title}`} {...Sevent} slug={Sevent.slug || ''}/>
           ))}
         </div>
       </div>
