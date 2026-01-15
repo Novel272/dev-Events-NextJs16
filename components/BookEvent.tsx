@@ -4,15 +4,17 @@ import React, { useState } from 'react'
 const BookEvent = () => {
     const [email,setEmail]=useState('');
     const [submitted,setSubmitted]=useState(false);
+
+
     const handleSubmit=(e:React.FormEvent)=>{
         e.preventDefault();
         setTimeout(()=>{
             setSubmitted(true);
-        },10000);
+        },5000);
     
     }
   return (
-    <div className='book-event'>
+    <div id='book-event'>
         {submitted?(
             <p className='text-sm'>Thank you for booking this event from our website</p>):(
                 <form onSubmit={handleSubmit}>
@@ -25,7 +27,7 @@ const BookEvent = () => {
                             onChange={(e)=>setEmail(e.target.value)}
                             placeholder='Email Address' />
                     </div>
-                    <button type='submit' className='button-submit'>Submit</button>
+                    <button type="submit" className="button-submit">Submit</button>
                 </form>
             )}
       

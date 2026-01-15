@@ -64,7 +64,7 @@ const EventDetailedPage = async ({params}:{ params:Promise<{slug:string}>}) => {
 const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
 
   return (
-    <section id="events">
+    <section id="event">
       <div className="header"> 
         <h1>Event Description</h1>
         <p>{title}</p>
