@@ -34,8 +34,8 @@ const Page = async () => {
         <h3>Featured Events</h3>
 
         <ul className="events">
-          {events&&events.length>0&&events.filter((event:EventAttrs)=>event.slug).map((event:EventAttrs)=>(
-            <li key={event.slug || event.id || `event-${event.title}`} className="list-none">
+          {events&&events.length>0&&events.filter((event:EventAttrs)=>event.slug).map((event:EventAttrs, index)=>(
+            <li key={event.slug || `event-${index}`} className="list-none">
               <EventCard {...event} slug={event.slug || ''}/>
             </li>
           ))}

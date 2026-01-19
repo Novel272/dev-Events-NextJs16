@@ -1,83 +1,80 @@
-import { Schema, model, models, Document, Model, Types } from 'mongoose';
-import { Event } from './event.model';
+import { Schema, model, models, Document, Types } from 'mongoose';
+import Event from './event.model';
 
-/**
- * Booking attributes that can be provided when creating a new Booking.
- */
-export interface BookingAttrs {
+// TypeScript interface for Booking document
+export interface Booking extends Document {
   eventId: Types.ObjectId;
   email: string;
-}
-
-/**
- * Booking document as stored in MongoDB.
- */
-export interface BookingDocument extends BookingAttrs, Document {
+  slug: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-/**
- * Booking model type.
- */
-export type BookingModel = Model<BookingDocument>;
-
-/**
- * Simple email format validation (sufficient for most application use cases).
- */
-const emailRegex: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const BookingSchema = new Schema<BookingDocument, BookingModel>(
+const BookingSchema = new Schema<Booking>(
   {
     eventId: {
       type: Schema.Types.ObjectId,
       ref: 'Event',
-      required: true,
-      index: true, // index for faster lookups by event
+      required: [true, 'Event ID is required'],
     },
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       trim: true,
       lowercase: true,
       validate: {
-        validator: (value: string): boolean => emailRegex.test(value),
-        message: 'Invalid email format.',
+        validator: function (email: string) {
+          // RFC 5322 compliant email validation regex
+          const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+          return emailRegex.test(email);
+        },
+        message: 'Please provide a valid email address',
       },
+    },
+    slug: {
+      type: String,
+      required: [true, 'Slug is required'],
+      trim: true,
     },
   },
   {
-    timestamps: true, // automatically manages createdAt and updatedAt
-    collection: 'bookings',
-  },
+    timestamps: true, // Auto-generate createdAt and updatedAt
+  }
 );
 
-/**
- * Pre-save hook to:
- * - Ensure the referenced event exists before creating a booking.
- */
-BookingSchema.pre<BookingDocument>('save', async function preSave(next) {
-  try {
-    if (!this.isModified('eventId')) {
-      return next();
+// Pre-save hook to validate events exists before creating booking
+BookingSchema.pre('save', async function () {
+  const booking = this as any;
+
+  // Only validate eventId if it's new or modified
+  if (booking.eventId) {
+    try {
+      const eventExists = await Event.findById(booking.eventId).select('_id');
+
+      if (!eventExists) {
+        throw new Error(`Event with ID ${booking.eventId} does not exist`);
+      }
+    } catch (error) {
+      throw error;
     }
-
-    const eventExists = await Event.exists({ _id: this.eventId }).lean().exec();
-
-    if (!eventExists) {
-      return next(new Error('Cannot create booking: referenced event does not exist.'));
-    }
-
-    return next();
-  } catch (error) {
-    return next(error as Error);
   }
 });
 
-/**
- * Booking model. Reuses an existing compiled model in dev to avoid OverwriteModelError.
- */
-export const Booking: BookingModel =
-  (models.Booking as BookingModel) || model<BookingDocument, BookingModel>('Booking', BookingSchema);
+// Create index on eventId for faster queries
+BookingSchema.index({ eventId: 1 });
 
-export default Booking;
+// Create compound index for common queries (events bookings by date)
+BookingSchema.index({ eventId: 1, createdAt: -1 });
+
+// Create index on email for user booking lookups
+BookingSchema.index({ email: 1 });
+
+// Enforce one booking per events per email
+BookingSchema.index({ eventId: 1, email: 1 }, { unique: true, name: 'uniq_event_email' });
+
+// Create index on slug for easier lookups
+BookingSchema.index({ slug: 1 });
+
+const BookingModel = models.Booking || model<Booking>('Booking', BookingSchema);
+
+export default BookingModel;

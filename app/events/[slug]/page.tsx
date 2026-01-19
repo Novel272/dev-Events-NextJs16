@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { Suspense } from "react";
 import BookEvent from "@/components/BookEvent";
 import { EventAttrs } from "@/database";
 import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
 import EventCard from "@/components/EventCard";
+import { cacheLife } from "next/cache";
 
 const BASE_URL=process.env.NEXT_PUBLIC_BASE_URL;
 
@@ -45,16 +47,28 @@ const EventTags=({tagList}:{tagList?:string[]})=>{
   )
 }
 
+interface EventData {
+  _id: string;
+  title: string;
+  description: string;
+  image: string;
+  overview: string;
+  date: string;
+  time: string;
+  location: string;
+  mode: string;
+  agenda: string[];
+  audience: string;
+  tags: string[];
+  organizer: string;
+}
 
-const EventDetailedPage = async ({params}:{ params:Promise<{slug:string}>}) => {
-
-  const {slug}=await params;
-  
+async function EventContent({ slug }: { slug: string }) {
   if (!BASE_URL) {
     throw new Error('BASE_URL is not defined');
   }
   
-  const request=await fetch(`${BASE_URL}/api/events/${slug}`);
+  const request = await fetch(`${BASE_URL}/api/events/${slug}`);
   
   if (request.status === 404) {
     return notFound();
@@ -64,18 +78,13 @@ const EventDetailedPage = async ({params}:{ params:Promise<{slug:string}>}) => {
     throw new Error(`Failed to fetch event: ${request.status} ${request.statusText}`);
   }
   
-  // BUGFIX: Properly destructure the event object from the API response
-  // The API returns { event: {...} }, so we need to extract data.event first
-  // Then destructure all the individual fields from it
-  // Using || {} as fallback ensures we get empty object instead of undefined if API fails
   const data = await request.json();
-  const {title, description, image, overview, date, time, location, mode, agenda, audience, tags, organizer} = data.event || {};
+  const { _id, title, description, image, overview, date, time, location, mode, agenda, audience, tags, organizer } = data.event || {};
 
-  if(!title) return notFound();
+  if (!title) return notFound();
 
-  const bookings=10;
-
-const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
+  const bookings = 10;
+  const similarEvent: EventAttrs[] = await getSimilarEventsBySlug(slug);
 
   return (
     <section id="event">
@@ -121,20 +130,34 @@ const similarEvent:EventAttrs[]=await getSimilarEventsBySlug(slug);
               <p className="text-sm">Be the first to join</p>
             )}
 
-            <BookEvent />
+            <BookEvent eventId={_id} slug={slug} />
           </div>
         </aside>
       </div>
       <div className="flex w-full flex-col gap-4 pt-20">
         <h2>Similar Events You May Like</h2>
         <div className="events">
-          {similarEvent.length>0 && similarEvent.map((Sevent:EventAttrs)=>(
-            <EventCard key={Sevent.slug || Sevent.id || `event-${Sevent.title}`} {...Sevent} slug={Sevent.slug || ''}/>
+          {similarEvent.length>0 && similarEvent.map((Sevent:EventAttrs, index)=>(
+            <EventCard key={Sevent.slug || `event-${index}`} {...Sevent} slug={Sevent.slug || ''}/>
           ))}
         </div>
       </div>
     </section>
-  )
+  );
+}
+
+const EventDetailedPage = async({ params }: { params: Promise<{ slug: string }> }) => {
+  "use cache";
+  cacheLife("hours");
+  
+  // Await params here, outside the Suspense boundary
+  const { slug } = await params;
+
+  return (
+    <Suspense fallback={<div>Loading event...</div>}>
+      <EventContent slug={slug} />
+    </Suspense>
+  );
 };
 
 export default EventDetailedPage;
