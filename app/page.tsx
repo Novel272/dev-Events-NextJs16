@@ -5,13 +5,7 @@ import { EventAttrs } from "@/database";
 
 // Async server component responsible for data fetching, rendered within Suspense
 async function EventsSection() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_BASE_URL is not defined");
-  }
-
-  const response = await fetch(`${baseUrl}/api/events`, {
+  const response = await fetch(`/api/events`, {
     cache: "no-store",
   });
 

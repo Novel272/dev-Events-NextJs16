@@ -56,19 +56,17 @@ async function EventContent({ slug }: { slug: string }) {
 
   let event: EventData | undefined;
 
-  // Try fetching from API if BASE_URL is defined
-  if (BASE_URL) {
-    try {
-      const res = await fetch(`${BASE_URL}/api/events/${slug}`);
-      if (res.ok) {
-        const data = await res.json();
-        event = data.event;
-      } else if (res.status === 404) {
-        return notFound();
-      }
-    } catch (err) {
-      // ignore, fallback to constants
+  // Try fetching from relative API route on server
+  try {
+    const res = await fetch(`/api/events/${slug}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      event = data.event;
+    } else if (res.status === 404) {
+      return notFound();
     }
+  } catch (err) {
+    // ignore, fallback to constants
   }
 
   // Fallback to constants if no API data
