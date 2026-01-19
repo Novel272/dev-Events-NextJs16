@@ -51,6 +51,7 @@ interface EventData extends EventAttrs {
 }
 
 async function EventContent({ slug }: { slug: string }) {
+  "use cache";
   if (typeof window === "undefined") cacheLife("hours"); // server-side cache
 
   let event: EventData | undefined;
