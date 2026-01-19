@@ -1,7 +1,7 @@
 import EventCard from "@/components/EventCard"
 import ExploreBtn from "@/components/ExploreBtn"
 import { EventAttrs } from "@/database";
-import { cacheLife } from "next/cache";
+
 
 
 // Get the base URL from environment variables
@@ -9,7 +9,6 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
 
 const Page = async () => {
-
 
   if (!baseUrl) {
     throw new Error('NEXT_PUBLIC_BASE_URL is not defined');
