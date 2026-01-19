@@ -1,9 +1,15 @@
 import type { Metadata } from "next"
+import dynamic from "next/dynamic"
 import { Schibsted_Grotesk, Martian_Mono } from "next/font/google"
 import "./globals.css"
 import LightRays from "@/components/LightRays"
 import NavBar from "@/components/NavBar"
-import PostHogProviderWrapper from "./posthog-provider"
+
+// dynamically import PostHogProviderWrapper
+const PostHogProviderWrapper = dynamic(
+  () => import("./posthog-provider"),
+  { ssr: false }
+)
 
 const schibstedGrotesk = Schibsted_Grotesk({
   variable: "--font-schibsted-grotesk",
@@ -30,13 +36,11 @@ export default function RootLayout({
       <body
         className={`${schibstedGrotesk.variable} ${martianMono.variable} min-h-screen antialiased`}
       >
+        {/* PostHog runs only on the client now */}
         <PostHogProviderWrapper>
           <NavBar />
 
-          <div
-            className="absolute inset-0 top-0 z-[-1] min-h-screen"
-            
-          >
+          <div className="absolute inset-0 top-0 z-[-1] min-h-screen">
             <LightRays
               raysOrigin="top-center-offset"
               raysColor="#5dfeca"
@@ -54,5 +58,5 @@ export default function RootLayout({
         </PostHogProviderWrapper>
       </body>
     </html>
-  );
+  )
 }
