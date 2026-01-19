@@ -14,9 +14,9 @@ const Page = async () => {
     throw new Error('NEXT_PUBLIC_BASE_URL is not defined');
   }
 
-  const response = await fetch(`${baseUrl}/api/events`, {
-  next: { revalidate: 3600 } // cache for 1 hour
-});
+   const response = await fetch(`${baseUrl}/api/events`, {
+    cache: "no-store"
+  })
   
   if (!response.ok) {
     throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
