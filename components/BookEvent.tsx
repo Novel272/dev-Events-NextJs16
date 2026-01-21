@@ -1,4 +1,4 @@
-'use client'
+"use client"
 import React, { useState } from 'react'
 import { createBooking } from '@/lib/actions/booking.action';
 import posthog from 'posthog-js';
@@ -17,7 +17,7 @@ const BookEvent = ({eventId,slug}:{eventId:string,slug:string}) => {
             });
         }else{
             console.log("Booking submission failed");
-            posthog.captureException('booking_submission_failed');
+            posthog.capture('booking_submission_failed', { eventId, slug, email });
         }
     
     }
