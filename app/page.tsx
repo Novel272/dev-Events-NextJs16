@@ -13,7 +13,7 @@ const Page = async () => {
   'use cache';
   cacheLife("hours");
 
-  const response=await fetch(`${baseUrl}/api/events`);
+  const response=await fetch(`/api/events`);
   
   const {events}=await response.json();
 
