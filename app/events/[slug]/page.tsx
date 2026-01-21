@@ -7,10 +7,8 @@ import BookEvent from "@/components/BookEvent";
 import EventCard from "@/components/EventCard";
 import { events } from "@/lib/constants";
 import { EventAttrs } from "@/database";
-import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
+import { getSimilarEventsBySlug, getEventBySlug } from "@/lib/actions/event.actions";
 import { cacheLife } from "next/cache";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 const EventDetailedItem = ({ icon, alt, label }: { icon: string; alt: string; label: string }) => (
   <div className="flex-row-gap-2 items-center">
@@ -56,20 +54,13 @@ async function EventContent({ slug }: { slug: string }) {
 
   let event: EventData | undefined;
 
-  // Try fetching from relative API route on server
-  try {
-    const res = await fetch(`/api/events/${slug}`, { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      event = data.event;
-    } else if (res.status === 404) {
-      return notFound();
-    }
-  } catch (err) {
-    // ignore, fallback to constants
+  // Query DB directly to avoid relative URL resolution issues
+  const dbEvent = await getEventBySlug(slug);
+  if (dbEvent) {
+    event = dbEvent as unknown as EventData;
   }
 
-  // Fallback to constants if no API data
+  // Fallback to constants if no API/DB data
   if (!event) {
     const fallback = events.find((e) => e.slug === slug);
     if (!fallback) return notFound();
@@ -83,7 +74,7 @@ async function EventContent({ slug }: { slug: string }) {
       audience: "Everyone",
       organizer: "Organizer Info",
       tags: [],
-      venue: "TBD", // <-- add this
+      venue: "TBD",
       ...fallback,
     } as EventData;
   }

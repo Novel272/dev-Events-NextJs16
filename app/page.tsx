@@ -2,18 +2,11 @@ import { Suspense } from "react";
 import EventCard from "@/components/EventCard";
 import ExploreBtn from "@/components/ExploreBtn";
 import { EventAttrs } from "@/database";
+import { getAllEvents } from "@/lib/actions/event.actions";
 
 // Async server component responsible for data fetching, rendered within Suspense
 async function EventsSection() {
-  const response = await fetch(`/api/events`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
-  }
-
-  const { events } = await response.json();
+  const events = await getAllEvents();
 
   return (
     <ul className="events">
