@@ -13,16 +13,7 @@ const Page = async () => {
   'use cache';
   cacheLife("hours");
 
-  
-  if (!baseUrl) {
-    throw new Error('NEXT_PUBLIC_BASE_URL is not defined');
-  }
-
   const response=await fetch(`${baseUrl}/api/events`);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch events: ${response.status} ${response.statusText}`);
-  }
   
   const {events}=await response.json();
 
